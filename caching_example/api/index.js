@@ -14,29 +14,35 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const RedisStore = connectRedis(session);
 
 const redisClient = redis.createClient({
-    legacyMode: true,
     host: process.env.REDIS_HOST,   
     port: 6379
 });
 
-redisClient.connect().catch(console.error);
+redisClient.on("error", function(error) {
+    console.error(error);
+});
+  
 
 app.use(session({
     store: new RedisStore({ client: redisClient }),
     secret: 'mysecret',
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 1000
+    }
 }));
 
 app.get("/", (req, res) => {
     const sess = req.session;
+    console.log(sess);
     if (sess.username && sess.password) {
         if (sess.username) {
             res.write(`<h1>Welcome ${sess.username} </h1><br>`)
             res.write(
                 `<h3>This is the Home page</h3>`
             );
-            res.send('<a href=' + '/logout' + '>Click here to log out</a >')
+            res.end('<a href=' + '/logout' + '>Click here to log out</a >')
         }
     } else {
         res.sendFile(__dirname + "/login.html")
@@ -45,10 +51,11 @@ app.get("/", (req, res) => {
 
 app.post("/login", (req, res) => {
     const sess = req.session;
+    console.log(req.session);
     const { username, password } = req.body
     sess.username = username
     sess.password = password
-    res.send("success")
+    res.end("success")
 });
 
 app.get("/logout", (req, res) => {
